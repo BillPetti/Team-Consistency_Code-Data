@@ -1,0 +1,20 @@
+# Query Lahman Database for home team daily runs scored and allowed
+SELECT HOME_TEAM_ID as "Home Team", GAME_DT as "Game Date", substr(game_id,4,4) as "Year", HOME_SCORE_CT as "R", AWAY_SCORE_CT as "RA"
+
+FROM games
+
+WHERE substr(game_id,4,7) > 1970
+
+ORDER BY HOME_TEAM_ID ASC, substr(game_ID,4,4) DESC
+
+# Query Lahman Database for away team daily runs scored and allowed
+
+SELECT AWAY_TEAM_ID as "Away Team", GAME_DT as "Game Date", substr(game_id,4,4) as "Year", AWAY_SCORE_CT as "R", HOME_SCORE_CT as "RA"
+
+FROM games
+
+WHERE substr(game_id,4,7) > 1970
+
+ORDER BY AWAY_TEAM_ID ASC, substr(game_ID,4,4) DESC
+
+# Files are then merged manually and saved as a CSV
