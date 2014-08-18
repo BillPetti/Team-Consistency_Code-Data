@@ -1,4 +1,4 @@
-# Query Lahman Database for home team daily runs scored and allowed
+# Query Retrosheet Database for home team daily runs scored and allowed
 SELECT HOME_TEAM_ID as "Home Team", GAME_DT as "Game Date", substr(game_id,4,4) as "Year", HOME_SCORE_CT as "R", AWAY_SCORE_CT as "RA"
 
 FROM games
@@ -7,7 +7,7 @@ WHERE substr(game_id,4,7) > 1970
 
 ORDER BY HOME_TEAM_ID ASC, substr(game_ID,4,4) DESC
 
-# Query Lahman Database for away team daily runs scored and allowed
+# Query Retrosheet Database for away team daily runs scored and allowed
 
 SELECT AWAY_TEAM_ID as "Away Team", GAME_DT as "Game Date", substr(game_id,4,4) as "Year", AWAY_SCORE_CT as "R", HOME_SCORE_CT as "RA"
 
@@ -18,3 +18,52 @@ WHERE substr(game_id,4,7) > 1970
 ORDER BY AWAY_TEAM_ID ASC, substr(game_ID,4,4) DESC
 
 # Files are then merged manually and saved as a CSV
+
+# Query for creating a league average table for offense and defense (distinguishes between AL and NL). Table added to Lahman database as Leagues
+
+SELECT lgID, yearID AS "YEAR",
+
+sum(AB), sum(AB+BB+HBP+SF) as PA, sum(BB), sum(BB)/sum(AB+BB+HBP+SF) as "BB_PA", sum(SO), sum(SO)/sum(AB+BB+HBP+SF) as "SO_PA", sum(HR), sum(HR)/sum(AB+BB+HBP+SF) as "HR_PA", ((sum(H)-sum(2B)-sum(3B)-sum(HR))+(sum(2B)*2)+(sum(3B)*3)+(sum(HR)*4))/sum(AB) as "SLG", (sum(H)-sum(HR))/(sum(AB)-sum(SO)-sum(HR)+sum(SF)) as "BABIP",
+
+# team pitching and defense
+
+sum(IPouts)/3 as "IP", (sum(IPouts) + sum(HA) + sum(E) + sum(BBA)) as "TBF", sum(BBA), sum(BBA)/(sum(IPouts) + sum(HA) + sum(E) + sum(BBA)) as "BBA_TBF", sum(SOA), sum(SOA)/(sum(IPouts) + sum(HA) + sum(E) + sum(BBA)) as "SOA_TBF", sum(HRA), sum(HRA)/(sum(IPouts) + sum(HA) + sum(E) + sum(BBA)) as "HRA_TBF"
+
+FROM Teams
+
+GROUP BY lgID,yearID
+
+ORDER BY lgID ASC, yearID DESC
+
+# Query for Team-level data from the Lahman Database
+
+SELECT lgID, teamID, franchID, yearID AS "YEAR", W, L, 
+
+# actual and expected winning percentages
+
+ROUND(sum(W/(W+L)),3) as "WINpct", 
+
+R, RA, R-RA as "RUN_DIFFERENTIAL", 
+
+POW(sum((R+RA)/G),.287) AS "PYTHAGENPAT_EXPONENT", 
+
+ROUND(POW(R,POW(sum((R+RA)/G),.287))/(POW(R,POW(sum((R+RA)/G),.287))+POW(RA,POW(sum((R+RA)/G),.287))),3) as "PYTHAGENPAT_WINpct", 
+
+ROUND((W+L)*ROUND(POW(R,POW(sum((R+RA)/G),.287))/(POW(R,POW(sum((R+RA)/G),.287))+POW(RA,POW(sum((R+RA)/G),.287))),3),0) AS "EXPECTED_WINS",
+
+# team offense
+
+AB, (AB+BB+HBP+SF) as PA, BB, BB/(AB+BB+HBP+SF) as "BB_PA", SO, SO/(AB+BB+HBP+SF) as "SO_PA", HR, HR/(AB+BB+HBP+SF) as "HR_PA", ((H-2B-3B-HR)+(2B*2)+(3B*3)+(HR*4))/AB as "SLG", (H-HR)/(AB-SO-HR+SF) as "BABIP",
+
+# team pitching and defense
+
+IPouts/3 as "IP", (IPouts + HA + E + BBA) as "TBF", ERA, BBA, BBA/(IPouts + HA + E + BBA) as "BBA_TBF", SOA, SOA/(IPouts + HA + E + BBA) as "SOA_TBF", HRA, HRA/(IPouts + HA + E + BBA) as "HRA_TBF"
+
+FROM Teams
+
+WHERE yearID > 1970
+
+GROUP BY teamID,yearID
+
+ORDER BY franchID ASC, yearID DESC
+
