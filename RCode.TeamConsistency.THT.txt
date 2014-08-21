@@ -1,0 +1,159 @@
+#Caluculate Gini coefficients from dataset generated from Restrosheet
+library("reldist", lib.loc="/Library/Frameworks/R.framework/Versions/3.1/Resources/library")
+
+RGini<-aggregate(R ~ Team + Year, data = TeamGini, FUN = "gini")
+RAGini<-aggregate(RA ~ Team + Year, data = TeamGini, FUN = "gini")
+
+#This data was then matched into the team-level data set generated from the Lahman Database (see SQL doc for syntax)
+
+#name and attach data set for analysis in R
+Gini.data<-TeamLevelData_1970_Lahmandb
+
+#convert YEAR to charachter
+Gini.data$YEAR <- as.character(Gini.data$YEAR)
+
+#convert YEAR to numeric for bar charts/graphs
+Gini.data$YEAR.num <- as.numeric(Gini.data$YEAR)
+
+#create variables for runs per game and runs allowed per game for each team
+
+Gini.data$R_Game<-Gini.data$R/(Gini.data$W + Gini.data$L)
+Gini.data$RA_Game<-Gini.data$RA/(Gini.data$W + Gini.data$L)
+
+#Attach data for use with cor()
+attach(Gini.data)
+
+#Plot runs scored and runs allowed Gini by team, by year, on a combined boxplot
+library("ggplot2", lib.loc="/Library/Frameworks/R.framework/Versions/3.1/Resources/library")
+
+library("gplots", lib.loc="/Library/Frameworks/R.framework/Versions/3.1/Resources/library")
+
+library("mgcv", lib.loc="/Library/Frameworks/R.framework/Versions/3.1/Resources/library")
+
+library("grid", lib.loc="/Library/Frameworks/R.framework/Versions/3.1/Resources/library")
+
+GiniR_Game_YR<-ggplot(Gini.data, aes(x=YEAR,y=GiniR, fill="firebrick")) + geom_boxplot() + guides(fill=FALSE) + theme(plot.title = element_text(size=20, face="bold", vjust=2)) + theme(axis.title.x = element_text(face="bold")) + theme(axis.title.y = element_text(face="bold")) + xlab("Year") + ylab("R Consistency") + ggtitle ("Consistency of Runs Scored per Game")
+GiniRA_Game_YR<-ggplot(Gini.data, aes(x=YEAR,y=GiniRA, fill="firebrick")) + geom_boxplot() + guides(fill=FALSE) + theme(plot.title = element_text(size=20, face="bold", vjust=2)) + theme(axis.title.x = element_text(face="bold")) + theme(axis.title.y = element_text(face="bold")) + xlab("Year") + ylab("RA Consistency") + ggtitle ("Consistency of Runs Allowed per Game")
+pushViewport(viewport(layout = grid.layout(2, 1)))
+print(GiniR_Game_YR, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(GiniRA_Game_YR, vp = viewport(layout.pos.row = 2, layout.pos.col = 1))
+
+
+#Plot both Runs Scored Per Game and Runs Against Per Game, by team by year, on a combined boxplot
+R_Game_YR<-ggplot(Gini.data, aes(x=YEAR,y=R_Game, fill="firebrick")) + geom_boxplot() + guides(fill=FALSE) + theme(plot.title = element_text(size=20, face="bold", vjust=2)) + theme(axis.title.x = element_text(face="bold")) + theme(axis.title.y = element_text(face="bold")) + xlab("Year") + ylab("R/G") + ggtitle ("Runs Scored per Game")
+RA_Game_YR<-ggplot(Gini.data, aes(x=YEAR,y=RA_Game, fill="firebrick")) + geom_boxplot() + guides(fill=FALSE) + theme(plot.title = element_text(size=20, face="bold", vjust=2)) + theme(axis.title.x = element_text(face="bold")) + theme(axis.title.y = element_text(face="bold")) + xlab("Year") + ylab("RA/G") + ggtitle ("Runs Allowed per Game")
+pushViewport(viewport(layout = grid.layout(2, 1)))
+print(R_Game_YR, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(RA_Game_YR, vp = viewport(layout.pos.row = 2, layout.pos.col = 1))
+
+#correlate and plot Actual Winning% vs. runs scored & runs allowed Gini coefficients
+cor(GiniR,WINpct)
+
+cor(GiniRA,WINpct)
+
+RA_WINper<-ggplot(Gini.data, aes(x=GiniRA,y=WINpct)) + geom_point(shape=19, color="firebrick",size=4, alpha=1/2) + geom_smooth(method=lm, color="black") + theme(plot.title = element_text(size=20, face="bold", vjust=2)) + theme(axis.title.x = element_text(face="bold")) + theme(axis.title.y = element_text(face="bold")) + xlab("Consistency of Runs Allowed") + ylab("Actual Winning %") + annotate("text", x = .375, y = .2, label = "Correlation Coefficient = .49", fontface=4) + ylim(.2,.75)
+RS_WINper<-ggplot(Gini.data, aes(x=GiniR,y=WINpct)) + geom_point(shape=19, color="firebrick",size=4, alpha=1/2) + geom_smooth(method=lm, color="black") + theme(plot.title = element_text(size=20, face="bold", vjust=2)) + theme(axis.title.x = element_text(face="bold")) + theme(axis.title.y = element_text(face="bold")) + xlab("Consistency of Runs Scored") + ylab("Actual Winning %") + annotate("text", x = .375, y = .2, label = "Correlation Coefficient = -0.43", fontface=4) + ylim(.2,.75)
+pushViewport(viewport(layout = grid.layout(1, 2)))
+print(RA_WINper, vp = viewport(layout.pos.row = 1, layout.pos.col = 2))
+print(RS_WINper, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+
+#model Actual Winning % as a function of runs scored/allowed, and including consistency
+ACTW1<-lm(WINpct~R_Game + RA_Game, data=Gini.data)
+ACTW2<-lm(WINpct~R_Game + RA_Game + GiniR + GiniRA, data=Gini.data)
+
+#model the impact of consistency on Pythag Win% -- does it improve overall predictions?
+
+WIN1<-(lm(WINpct~PYTHAGENPAT_WINpct))
+WIN2<-(lm(WINpct~PYTHAGENPAT_WINpct + GiniR + GiniRA))
+anova(WIN1,WIN2)
+
+#correlate and plot Runs Scored per Game vs. Runs Scored Gini
+cor(GiniR,R_Game)
+
+#correlate and plot Runs Allowed per Game vs. Runs Allowed Gini
+cor(GiniRA,RA_Game)
+
+#Plot runs scored/Gini R and runs allowed/Gini RA side by side
+
+RS_RSGini<-ggplot(Gini.data, aes(x=GiniR,y=R_Game)) + geom_point(shape=19, color="firebrick",size=4, alpha=1/2) + geom_smooth(method=lm, color="black") + theme(plot.title = element_text(size=20, face="bold", vjust=2)) + theme(axis.title.x = element_text(face="bold")) + theme(axis.title.y = element_text(face="bold")) + xlab("Consistency of Runs Scored") + ylab("Runs Scored Per Game") + annotate("text", x = .37, y = 2, label = "Correlation Coefficient = -.59", fontface=4) + ylim(2,7)
+RA_RAGini<-ggplot(Gini.data, aes(x=GiniRA,y=RA_Game)) + geom_point(shape=19, color="firebrick",size=4, alpha=1/2) + geom_smooth(method=lm, color="black") + theme(plot.title = element_text(size=20, face="bold", vjust=2)) + theme(axis.title.x = element_text(face="bold")) + theme(axis.title.y = element_text(face="bold")) + xlab("Consistency of Runs Allowed") + ylab("Runs Allowed Per Game") + annotate("text", x = .37, y = 2, label = "Correlation Coefficient = -.64", fontface=4) + ylim(2,7)
+pushViewport(viewport(layout = grid.layout(1, 2)))
+print(RS_RSGini, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(RA_RAGini, vp = viewport(layout.pos.row = 1, layout.pos.col = 2))
+
+#plot runs scored Gini against wins above or below expected
+EXP_RSGini<-ggplot(Gini.data, aes(x=GiniR,y=EXP_ACT_W)) + geom_point(shape=19, color="firebrick",size=4, alpha=1/2) + geom_smooth(method=lm, color="black") + theme(plot.title = element_text(size=20, face="bold", vjust=2)) + theme(axis.title.x = element_text(face="bold")) + theme(axis.title.y = element_text(face="bold")) + xlab("Consistency of Runs Scored") + ylab("Wins Above/Below Expected") + annotate("text", x = .35, y = 3, label = "Correlation Coefficient = -.59", fontface=4) + ylim(-15,15)
+EXP_RAGini<-ggplot(Gini.data, aes(x=GiniRA,y=EXP_ACT_W)) + geom_point(shape=19, color="firebrick",size=4, alpha=1/2) + geom_smooth(method=lm, color="black") + theme(plot.title = element_text(size=20, face="bold", vjust=2)) + theme(axis.title.x = element_text(face="bold")) + theme(axis.title.y = element_text(face="bold")) + xlab("Consistency of Runs Allowed") + ylab("Wins Above/Below Expected") + annotate("text", x = .35, y = 3, label = "Correlation Coefficient = -.64", fontface=4) + ylim(-15,15)
+pushViewport(viewport(layout = grid.layout(1, 2)))
+print(EXP_RSGini, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+print(EXP_RAGini, vp = viewport(layout.pos.row = 1, layout.pos.col = 2))
+
+#linear modeling and analysis
+#load functions for calculating the PRESS statistic and the predictive R^2 for linear models. This code is used courtesy of Tom Hopper. See this article for a further explanation: http://tomhopper.me/2014/05/16/can-we-do-better-than-r-squared/. You can also find the code here: https://gist.github.com/tomhopper/8c204d978c4a0cbcb8c0 
+PRESS <- function(linear.model) {
+	#' calculate the predictive residuals
+	pr <- residuals(linear.model)/(1-lm.influence(linear.model)$hat)
+	#' calculate the PRESS
+	PRESS <- sum(pr^2)
+  
+    return(PRESS)
+}
+
+pred_r_squared <- function(linear.model) {
+	#' Use anova() to get the sum of squares for the linear model
+    lm.anova <- anova(linear.model)
+    #' Calculate the total sum of squares
+	tss <- sum(lm.anova$'Sum Sq')
+    # Calculate the predictive R^2
+	pred.r.squared <- 1-PRESS(linear.model)/(tss)
+  
+    return(pred.r.squared)
+}
+
+#compare the impact of Gini R and RA when modeled against wins above or below independently
+
+summary(lm(EXP_ACT_W~GiniR))
+summary(lm(EXP_ACT_W~GiniRA))
+
+#compare the impact of Gini R and RA when modeled against wins above or below independently, but controlling for a team's runs scored and allowed per game
+
+summary(lm(EXP_ACT_W~GiniR + R_Game + RA_Game))
+summary(lm(EXP_ACT_W~GiniRA + R_Game + RA_Game))
+
+#model the impact of Gini R and RA when holding each other constant
+
+summary(lm(EXP_ACT_W~GiniR + GiniRA))
+
+#model the impact of Gini R and RA -- separately and together -- when holding runs scores and allowed by teams constant
+GiniR_EXP<-lm(EXP_ACT_W~GiniR + R_Game + RA_Game)
+GiniRA_EXP<-lm(EXP_ACT_W~GiniRA + R_Game + RA_Game)
+GiniR_RA_EXP<-lm(EXP_ACT_W~GiniR + GiniRA + R_Game + RA_Game)
+
+#compare the models
+anova(GiniR_EXP,GiniRA_EXP)
+anova(GiniR_EXP,GiniR_RA_EXP)
+anova(GiniRA_EXP,GiniR_RA_EXP)
+
+#Predictive R^2 for the GiniR_RA_EXP model
+
+pred_r_squared(GiniR_RA_EXP)
+
+#apply model to 20 sample teams (TypesofTeams.ExData csv), each with varying scores for run scoring, runs allowed, and consistency of each. Includes fit (i.e. predicted number of wins above or below expected as well as 95% confidence intervals for each)
+
+Test<-TypesofTeams.ExData
+predict(GiniR_RA_EXP, interval="predict")
+
+#Manually added the fit and CI data to the Test data set and reloaded/named into R (still called Test)
+
+#impact of changing consistency of R and/or RA on wins above expected, controlling for teams with different run scoring and run prevention
+ggplot(Test, aes(x=Consistency.Type, y=Fit)) + geom_bar(stat="identity", colour="white", fill="firebrick") + coord_flip() + ylim(0,4) + facet_wrap(~Runs.Type) + geom_text(aes(label = round(Fit,2)), size = 5, hjust = 0, vjust = 0.5, fontface="bold") + theme(plot.title = element_text(size=15, face="bold", vjust=2)) + theme(axis.title.x = element_text(face="bold",colour="black")) + theme(axis.text.x = element_text(face="bold", colour="black"))+ theme(axis.title.y = element_text(face="bold", colour="black")) + theme(axis.text.y = element_text(face="bold",colour="black"))+ xlab("Type of Consistency") + ylab("Predicted Wins Above Expected") + ggtitle ("Predicted Impact of Different Levels of Consistency")
+
+#model the impact of consistency on Pythag Win% -- does it improve overall predictions?
+
+WIN1<-(lm(WINpct~PYTHAGENPAT_WINpct))
+WIN2<-(lm(WINpct~PYTHAGENPAT_WINpct + GiniR + GiniRA))
+anova(WIN1,WIN2)
+
+#Predictive R^2 for the WIN2 model
+
+pred_r_squared(WIN2)
