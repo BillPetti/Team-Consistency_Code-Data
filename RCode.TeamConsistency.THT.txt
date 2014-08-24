@@ -85,13 +85,6 @@ pushViewport(viewport(layout = grid.layout(1, 2)))
 print(RS_RSGini, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
 print(RA_RAGini, vp = viewport(layout.pos.row = 1, layout.pos.col = 2))
 
-#plot runs scored Gini against wins above or below expected
-EXP_RSGini<-ggplot(Gini.data, aes(x=GiniR,y=EXP_ACT_W)) + geom_point(shape=19, color="firebrick",size=4, alpha=1/2) + geom_smooth(method=lm, color="black") + theme(plot.title = element_text(size=20, face="bold", vjust=2)) + theme(axis.title.x = element_text(face="bold")) + theme(axis.title.y = element_text(face="bold")) + xlab("Consistency of Runs Scored") + ylab("Wins Above/Below Expected") + annotate("text", x = .35, y = 3, label = "Correlation Coefficient = -.59", fontface=4) + ylim(-15,15)
-EXP_RAGini<-ggplot(Gini.data, aes(x=GiniRA,y=EXP_ACT_W)) + geom_point(shape=19, color="firebrick",size=4, alpha=1/2) + geom_smooth(method=lm, color="black") + theme(plot.title = element_text(size=20, face="bold", vjust=2)) + theme(axis.title.x = element_text(face="bold")) + theme(axis.title.y = element_text(face="bold")) + xlab("Consistency of Runs Allowed") + ylab("Wins Above/Below Expected") + annotate("text", x = .35, y = 3, label = "Correlation Coefficient = -.64", fontface=4) + ylim(-15,15)
-pushViewport(viewport(layout = grid.layout(1, 2)))
-print(EXP_RSGini, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
-print(EXP_RAGini, vp = viewport(layout.pos.row = 1, layout.pos.col = 2))
-
 #linear modeling and analysis
 #load functions for calculating the PRESS statistic and the predictive R^2 for linear models. This code is used courtesy of Tom Hopper. See this article for a further explanation: http://tomhopper.me/2014/05/16/can-we-do-better-than-r-squared/. You can also find the code here: https://gist.github.com/tomhopper/8c204d978c4a0cbcb8c0 
 PRESS <- function(linear.model) {
@@ -145,14 +138,7 @@ pred_r_squared(GiniR_RA_EXP)
 #apply model to 20 sample teams (TypesofTeams.ExData csv), each with varying scores for run scoring, runs allowed, and consistency of each. Includes fit (i.e. predicted number of wins above or below expected as well as 95% confidence intervals for each)
 
 Test<-TypesofTeams.ExData
-predict(GiniR_RA_EXP, interval="predict")
-
-#Manually added the fit and CI data to the Test data set and reloaded/named into R (still called Test)
-
-#impact of changing consistency of R and/or RA on wins above expected, controlling for teams with different run scoring and run prevention
-ggplot(Test, aes(x=Consistency.Type, y=Fit)) + geom_bar(stat="identity", colour="white", fill="firebrick") + coord_flip() + ylim(0,4) + facet_wrap(~Runs.Type) 
-+ geom_text(aes(label = round(Fit,2)), size = 5, hjust = 0, vjust = 0.5, fontface="bold") + theme(plot.title = element_text(size=15, face="bold", vjust=2)) + theme(axis.title.x = element_text(face="bold",colour="black")) 
-+ theme(axis.text.x = element_text(face="bold", colour="black"))+ theme(axis.title.y = element_text(face="bold", colour="black")) + theme(axis.text.y = element_text(face="bold",colour="black"))+ xlab("Type of Consistency") + ylab("Predicted Wins Above Expected") + ggtitle ("Predicted Impact of Different Levels of Consistency")
+fit.new.data<-predict(GiniR_RA_EXP, Test, interval="predict")
 
 #model the impact of consistency on Pythag Win% -- does it improve overall predictions?
 
