@@ -135,6 +135,16 @@ anova(GiniRA_EXP,GiniR_RA_EXP)
 
 pred_r_squared(GiniR_RA_EXP)
 
+#apply model to 20 sample teams (TypesofTeams.ExData csv), each with varying scores for run scoring, runs allowed, and consistency of each. Includes fit (i.e. predicted number of wins above or below expected as well as 95% confidence intervals for each)
+
+Test<-TypesofTeams.ExData
+fit.new.data<-predict(GiniR_RA_EXP, Test, interval="predict")
+
+#Manually added the fit data to the Test data set and reloaded/named into R (still called Test)
+
+#impact of changing consistency of R and/or RA on wins above expected, controlling for teams with different run scoring and run prevention
+ggplot(Test.Teams, aes(x=Types_of_teams, y=Wins_Above_Expecation)) + geom_bar(stat="identity", colour="white", fill="firebrick") + ylim(0,3) + xlab("Combinations of Consistency") + theme(axis.text=element_text(face="bold",colour="black",size=15)) + theme(axis.title.y=element_text(face="bold",colour="black",size=20)) + theme(axis.title.x=element_text(face="bold",colour="black",size=20)) + ylab("Predicted Wins Above Expecation") + geom_text(aes(label = round(Wins_Above_Expecation,2)), size = 6, hjust = 0.5, vjust = -.5, fontface="bold") + ggtitle ("Predicted Impact of Different Levels of Consistency") + theme(plot.title = element_text(size=25, face="bold", vjust=2))
+
 #model the impact of consistency on Pythag Win% -- does it improve overall predictions?
 
 WIN1<-(lm(WINpct~PYTHAGENPAT_WINpct))
@@ -144,9 +154,3 @@ anova(WIN1,WIN2)
 #Predictive R^2 for the WIN2 model
 
 pred_r_squared(WIN2)
-
-#apply model to 20 sample teams (TypesofTeams.ExData csv), each with varying scores for run scoring, runs allowed, and consistency of each. Includes fit (i.e. predicted number of wins above or below expected as well as 95% confidence intervals for each)
-
-Test<-TypesofTeams.ExData
-fit.new.data<-predict(GiniR_RA_EXP, Test, interval="predict")
-
